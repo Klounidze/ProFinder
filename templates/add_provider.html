@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить специалиста — ProFinder{% endblock %}
+
+{% block content %}
+<div class="add-form-container">
+    <h2>➕ Добавить специалиста</h2>
+    <p class="subtitle">Заполните информацию о себе или своей компании</p>
+
+    <form method="POST" action="{% url 'add_provider' %}">
+        {% csrf_token %}
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="full_name">Имя специалиста *</label>
+                <input type="text" id="full_name" name="full_name" placeholder="Иван Иванов" required>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Категория *</label>
+                <select id="category" name="category" required>
+                    <option value="">-- Выберите категорию --</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Телефон</label>
+                <input type="text" id="phone" name="phone" placeholder="+7 (XXX) XXX-XX-XX">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="email@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="tags">Теги</label>
+                <input type="text" id="tags" name="tags" placeholder="врач, педиатр, дети, клиника">
+                <small style="color: var(--text-muted); font-size: 0.8rem;">Введите теги через запятую</small>
+            </div>
+
+            <div class="form-group">
+                <label for="country">Страна *</label>
+                <input type="text" id="country" name="country" placeholder="Россия, Украина..." required>
+            </div>
+
+            <div class="form-group">
+                <label for="city">Город</label>
+                <input type="text" id="city" name="city" placeholder="Москва, Киев...">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="address">Адрес</label>
+                <input type="text" id="address" name="address" placeholder="ул. Ленина, д. 10">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="description">Описание</label>
+                <textarea id="description" name="description" placeholder="Расскажите о вашем опыте, услугах, преимуществах..."></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">✅ Добавить</button>
+            <a href="{% url 'index' %}" class="btn btn-secondary">← Назад</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

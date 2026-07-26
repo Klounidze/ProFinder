@@ -1,0 +1,30 @@
+# Основной фреймворк
+Django>=4.2,<5.0
+
+# Для работы с изображениями
+Pillow>=10.0.0
+
+# Для стилизации форм
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+
+# Для работы с API (если нужно)
+djangorestframework>=3.14.0
+
+# Для CORS (если нужен API для фронтенда)
+django-cors-headers>=4.0.0
+
+# Для работы с .env файлами
+python-dotenv>=1.0.0
+
+# Для работы с PostgreSQL (если перейдете с SQLite)
+psycopg2-binary>=2.9.0
+
+# Для работы с Redis (кэширование, сессии)
+redis>=5.0.0
+
+# Для работы с Celery (фоновые задачи)
+celery>=5.3.0
+
+# Для логирования и отладки
+django-debug-toolbar>=4.0.0

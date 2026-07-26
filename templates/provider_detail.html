@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}{{ provider.full_name }} — ProFinder{% endblock %}
+
+{% block content %}
+<div class="provider-detail">
+    <div class="detail-header">
+        <h1>{{ provider.full_name }}</h1>
+        <a href="{% url 'index' %}" class="back-link">← Назад</a>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-grid">
+            <div>
+                <div class="label">Имя специалиста</div>
+                <div class="value">{{ provider.full_name }}</div>
+            </div>
+
+            <div>
+                <div class="label">Категория</div>
+                <div class="value"><span class="category-tag">{{ provider.category }}</span></div>
+            </div>
+
+            <div>
+                <div class="label">Рейтинг</div>
+                <div class="value">
+                    {% if provider.rating %}
+                        <span class="rating">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= provider.rating|add:"0"|floatformat:"0"|add:"0" %}
+                                    ⭐
+                                {% endif %}
+                            {% endfor %}
+                            {{ provider.rating }} ({{ provider.reviews.count }} отзывов)
+                        </span>
+                    {% else %}
+                        <span style="color: var(--hh-gray);">Нет оценки</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="full-width">
+                <div class="label">Теги</div>
+                <div class="value">
+                    {% if provider.tags %}
+                        <div class="detail-tags">
+                            {% for tag in provider.get_tags_list %}
+                                <span class="tag">#{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span style="color: var(--hh-gray);">Нет тегов</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <div>
+                <div class="label">Страна</div>
+                <div class="value">{{ provider.country }}</div>
+            </div>
+
+            <div>
+                <div class="label">Город</div>
+                <div class="value">{{ provider.city|default:"Не указан" }}</div>
+            </div>
+
+            <div class="full-width">
+                <div class="label">Адрес</div>
+                <div class="value">{{ provider.address|default:"Не указан" }}</div>
+            </div>
+
+            <div>
+                <div class="label">Телефон</div>
+                <div class="value">{{ provider.phone|default:"Не указан" }}</div>
+            </div>
+
+            <div>
+                <div class="label">Email</div>
+                <div class="value">{{ provider.email|default:"Не указан" }}</div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="full-width">
+                <div class="label">Описание</div>
+                <div class="value" style="line-height: 1.7;">{{ provider.description|default:"Нет описания" }}</div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="full-width">
+                <div class="label">Добавлен</div>
+                <div class="value" style="color: var(--hh-gray); font-size: 0.85rem;">
+                    {{ provider.created_at|date:"d.m.Y в H:i" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reviews-section">
+        <h3>📝 Отзывы</h3>
+        {% with approved_reviews=provider.reviews.all %}
+            {% if approved_reviews %}
+                {% for review in approved_reviews %}
+                    {% if review.is_approved %}
+                    <div class="review-item">
+                        <div class="review-header">
+                            <span class="review-author">{{ review.user.username }}</span>
+                            <span class="review-rating">
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= review.rating %}
+                                        ⭐
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="review-date">{{ review.created_at|date:"d.m.Y" }}</span>
+                        </div>
+                        <div class="review-comment">{{ review.comment }}</div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <p class="hint" style="padding: 20px;">Пока нет отзывов. Будьте первым!</p>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% if user.is_authenticated and provider.is_active %}
+    <div class="add-review">
+        <h4>📝 Оставить отзыв</h4>
+        <form method="POST" action="{% url 'add_review' provider.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Оценка</label>
+                <select name="rating" class="form-control" required>
+                    <option value="5">⭐⭐⭐⭐⭐ — Отлично</option>
+                    <option value="4">⭐⭐⭐⭐ — Хорошо</option>
+                    <option value="3">⭐⭐⭐ — Нормально</option>
+                    <option value="2">⭐⭐ — Плохо</option>
+                    <option value="1">⭐ — Ужасно</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Комментарий</label>
+                <textarea name="comment" class="form-control" rows="3" placeholder="Расскажите о вашем опыте..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Отправить отзыв</button>
+        </form>
+    </div>
+    {% elif not user.is_authenticated %}
+    <div class="add-review">
+        <p class="hint" style="padding: 20px;">🔑 <a href="{% url 'login' %}">Войдите</a>, чтобы оставить отзыв</p>
+    </div>
+    {% elif not provider.is_active %}
+    <div class="add-review">
+        <p class="hint" style="padding: 20px;">⛔ Этот специалист временно недоступен</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
