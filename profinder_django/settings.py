@@ -3,17 +3,12 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'ваш-секретный-ключ')
 
-# Разрешаем все хосты для теста
-ALLOWED_HOSTS = [
-    'pfinder-748d6.containers.snapdeploy.app',
-    'localhost',
-    '127.0.0.1',
-]
-# ИЛИ через переменную окружения
-# ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+DEBUG = False
+
+# Добавьте ваш адрес на PythonAnywhere
+ALLOWED_HOSTS = ['ваш-логин.pythonanywhere.com']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -62,10 +57,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'profinder_django.wsgi.application'
 
+# База данных (PythonAnywhere дает MySQL)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ваш-логин$profinder_db',
+        'USER': 'ваш-логин',
+        'PASSWORD': 'ваш-пароль-базы-данных',
+        'HOST': 'ваш-логин.mysql.pythonanywhere-services.com',
+        'PORT': '3306',
     }
 }
 
