@@ -1,11 +1,9 @@
-# .htaccess в корне сайта
-Options +ExecCGI
-AddHandler cgi-script .cgi
+# Включаем Passenger
+PassengerEnabled On
 
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ /index.cgi/$1 [QSA,L]
+# Путь к вашему приложению
+PassengerAppRoot /home/ваш-логин/ваш-сайт.рф
 
-# Перенаправление статики
-RewriteRule ^static/(.*)$ /static/$1 [L]
-RewriteRule ^media/(.*)$ /media/$1 [L]
+# Путь к интерпретатору Python из виртуального окружения
+# Вместо 'ваш-логин' подставьте свой
+PassengerPython /home/ваш-логин/ваш-сайт.рф/venv/bin/python
