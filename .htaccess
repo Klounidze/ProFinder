@@ -1,0 +1,11 @@
+# .htaccess в корне сайта
+Options +ExecCGI
+AddHandler cgi-script .cgi
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ /index.cgi/$1 [QSA,L]
+
+# Перенаправление статики
+RewriteRule ^static/(.*)$ /static/$1 [L]
+RewriteRule ^media/(.*)$ /media/$1 [L]
