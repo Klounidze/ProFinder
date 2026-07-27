@@ -2,9 +2,13 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.contrib.auth import get_user_model
 from providers.models import Provider
 from .models import Chat, Message
 import json
+from users.email_utils import send_new_message_notification
+
+User = get_user_model()
 
 
 @login_required
@@ -37,6 +41,38 @@ def get_or_create_chat_with_provider(request, provider_id):
             'other_user': {
                 'id': provider_owner.id,
                 'username': provider_owner.username
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def get_or_create_chat_with_user(request, user_id):
+    """Получить или создать чат с пользователем по ID"""
+    try:
+        other_user = get_object_or_404(User, id=user_id)
+
+        if other_user == request.user:
+            return JsonResponse({'error': 'Нельзя написать самому себе'}, status=400)
+
+        chat = Chat.objects.filter(
+            Q(user1=request.user, user2=other_user) |
+            Q(user1=other_user, user2=request.user)
+        ).first()
+
+        if not chat:
+            chat = Chat.objects.create(
+                user1=min(request.user, other_user, key=lambda x: x.id),
+                user2=max(request.user, other_user, key=lambda x: x.id)
+            )
+
+        return JsonResponse({
+            'chat_id': chat.id,
+            'other_user': {
+                'id': other_user.id,
+                'username': other_user.username
             }
         })
 
@@ -86,6 +122,9 @@ def send_message(request, chat_id):
             sender=request.user,
             content=content
         )
+
+        # Отправляем email-уведомление
+        send_new_message_notification(message)
 
         return JsonResponse({
             'id': message.id,

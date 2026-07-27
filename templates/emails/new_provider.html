@@ -1,0 +1,22 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>🆕 Новый специалист</h2>
+
+<p>Здравствуйте, администратор!</p>
+
+<p>На ProFinder был добавлен новый специалист:</p>
+
+<div class="info-box">
+    <p><strong>Имя:</strong> {{ provider.full_name }}</p>
+    <p><strong>Категория:</strong> {{ provider.category }}</p>
+    <p><strong>Страна:</strong> {{ provider.country }}</p>
+    <p><strong>Город:</strong> {{ provider.city|default:"Не указан" }}</p>
+    <p><strong>Телефон:</strong> {{ provider.phone|default:"Не указан" }}</p>
+    <p><strong>Email:</strong> {{ provider.email|default:"Не указан" }}</p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ admin_url }}{{ provider.id }}/change/" class="btn">🛡️ Перейти в админку</a>
+</p>
+{% endblock %}

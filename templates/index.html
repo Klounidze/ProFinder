@@ -70,12 +70,13 @@
 </div>
 
 <script>
+    // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
     let currentChatId = null;
     let chatMessages = [];
     let chatPollingInterval = null;
     let currentUserId = {{ user.id|default:0 }};
 
-    // Поиск
+    // ===== ПОИСК =====
     document.getElementById('searchForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -156,8 +157,36 @@
         document.getElementById('chatModalInput').value = '';
         document.getElementById('chatModal').classList.add('active');
 
-        // Получаем или создаем чат
         fetch(`/chat/api/with_provider/${providerId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('chatModalMessages').innerHTML = `<div class="no-messages-hint" style="color: red;">❌ ${data.error}</div>`;
+                return;
+            }
+            currentChatId = data.chat_id;
+            loadMessages();
+            startPolling();
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            document.getElementById('chatModalMessages').innerHTML = '<div class="no-messages-hint" style="color: red;">❌ Ошибка загрузки чата</div>';
+        });
+    }
+
+    function openChatWithUser(userId, userName) {
+        document.getElementById('chatModalTitle').textContent = `💬 Чат с ${userName}`;
+        document.getElementById('chatModalMessages').innerHTML = '<div class="no-messages-hint">⏳ Загрузка...</div>';
+        document.getElementById('chatModalInput').value = '';
+        document.getElementById('chatModal').classList.add('active');
+
+        fetch(`/chat/api/with_user/${userId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -201,6 +230,7 @@
             })
             .catch(error => {
                 console.error('Ошибка загрузки сообщений:', error);
+                document.getElementById('chatModalMessages').innerHTML = '<div class="no-messages-hint" style="color: red;">❌ Ошибка загрузки сообщений</div>';
             });
     }
 
@@ -309,7 +339,9 @@
         return cookieValue;
     }
 
-    // Закрытие по клику вне модального окна
+    // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
+
+    // Закрытие модального окна по клику вне его
     document.getElementById('chatModal').addEventListener('click', function(e) {
         if (e.target === this) {
             closeChatModal();
@@ -325,6 +357,7 @@
 </script>
 
 <style>
+    /* ===== СТИЛИ МОДАЛЬНОГО ОКНА ЧАТА ===== */
     .chat-modal {
         display: none;
         position: fixed;
@@ -412,6 +445,7 @@
         color: var(--hh-gray);
         text-align: center;
         padding: 20px 0;
+        font-size: 0.9rem;
     }
 
     .chat-modal-input {

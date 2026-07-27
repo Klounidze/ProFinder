@@ -3,10 +3,20 @@ from django.db import models
 from django.utils import timezone
 
 
+def user_avatar_path(instance, filename):
+    """Путь для сохранения аватара пользователя"""
+    return f'avatars/user_{instance.id}/{filename}'
+
+
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    avatar = models.ImageField(
+        upload_to=user_avatar_path,
+        blank=True,
+        null=True,
+        verbose_name='Аватар'
+    )
     is_active = models.BooleanField(default=True)
     last_login = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -15,11 +25,10 @@ class User(AbstractUser):
         return self.username
 
     def get_unread_count(self):
-        """Общее количество непрочитанных сообщений"""
         from chat.models import Message
         unread = 0
         for chat in self.get_all_chats():
-            unread += chat.get_unread_count(self)
+            unread += chat.messages.filter(is_read=False).exclude(sender=self).count()
         return unread
 
     def get_all_chats(self):
@@ -49,3 +58,8 @@ class User(AbstractUser):
         # Сортируем по времени (сначала новые)
         notifications.sort(key=lambda x: x['created_at'], reverse=True)
         return notifications[:20]  # Максимум 20 уведомлений
+
+    def save(self, *args, **kwargs):
+        if self.username:
+            self.username = self.username.lower()
+        super().save(*args, **kwargs)

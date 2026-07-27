@@ -10,22 +10,39 @@
 
         <form method="POST" action="{% url 'edit_profile' %}" enctype="multipart/form-data">
             {% csrf_token %}
+
             <div class="form-group">
                 <label for="id_username">Имя пользователя</label>
                 <input type="text" id="id_username" name="username" value="{{ user.username }}" required>
             </div>
+
             <div class="form-group">
                 <label for="id_email">Email</label>
                 <input type="email" id="id_email" name="email" value="{{ user.email }}" required>
             </div>
+
             <div class="form-group">
                 <label for="id_phone">Телефон</label>
                 <input type="text" id="id_phone" name="phone" value="{{ user.phone|default:'' }}">
             </div>
+
             <div class="form-group">
-                <label for="id_avatar">Аватар</label>
-                <input type="file" id="id_avatar" name="avatar" accept="image/*">
+                <label>Текущий аватар</label>
+                {% if user.avatar %}
+                    <div style="margin: 10px 0;">
+                        <img src="{{ user.avatar.url }}" alt="Аватар" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">
+                    </div>
+                {% else %}
+                    <p style="color: var(--hh-gray);">Аватар не загружен</p>
+                {% endif %}
             </div>
+
+            <div class="form-group">
+                <label for="id_avatar">Загрузить новый аватар</label>
+                <input type="file" id="id_avatar" name="avatar" accept="image/*">
+                <small style="color: var(--hh-gray);">Поддерживаются форматы: JPG, PNG, GIF. Максимальный размер: 5 MB</small>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">💾 Сохранить</button>
                 <a href="{% url 'profile' %}" class="btn btn-secondary">← Назад</a>
@@ -33,4 +50,80 @@
         </form>
     </div>
 </div>
+
+<style>
+.edit-profile-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+    padding: 20px;
+}
+
+.edit-profile-card {
+    background: var(--hh-white);
+    padding: 40px 36px;
+    border-radius: var(--hh-radius-lg);
+    box-shadow: var(--hh-shadow);
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid #e0e0e0;
+}
+
+.edit-profile-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--hh-primary);
+}
+
+.edit-profile-card .subtitle {
+    text-align: center;
+    color: var(--hh-gray);
+    margin-bottom: 28px;
+    font-size: 0.9rem;
+}
+
+.edit-profile-card .form-group {
+    margin-bottom: 18px;
+}
+
+.edit-profile-card .form-group label {
+    font-weight: 600;
+    color: var(--hh-primary);
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.edit-profile-card .form-group input[type="text"],
+.edit-profile-card .form-group input[type="email"],
+.edit-profile-card .form-group input[type="file"] {
+    height: 44px;
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--hh-radius);
+    font-size: 0.95rem;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.edit-profile-card .form-group input:focus {
+    border-color: var(--hh-accent);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+    outline: none;
+}
+
+.edit-profile-card .form-group input[type="file"] {
+    padding: 6px;
+    height: auto;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+}
+</style>
 {% endblock %}

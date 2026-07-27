@@ -44,7 +44,7 @@
                                 {% if notifications_list %}
                                     {% for notif in notifications_list %}
                                         <a href="#" class="notification-item {% if not notif.is_read %}unread{% endif %}"
-                                           onclick="openChatModal({{ notif.other_user_id }}, '{{ notif.other_user_name }}')">
+                                           onclick="openChatWithUser({{ notif.other_user_id }}, '{{ notif.other_user_name }}')">
                                             <div class="notification-avatar">{{ notif.sender_name|slice:":1"|upper }}</div>
                                             <div class="notification-content">
                                                 <div class="notification-name">{{ notif.sender_name }}</div>
@@ -268,8 +268,7 @@
         function markAllRead(event) {
             event.preventDefault();
             event.stopPropagation();
-            // Здесь можно добавить AJAX-запрос для отметки всех сообщений как прочитанных
-            fetch('/api/mark_all_read/', {
+            fetch('/chat/api/mark_all_read/', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken'),
@@ -322,7 +321,7 @@
 
         // Периодическое обновление уведомлений (каждые 30 секунд)
         setInterval(function() {
-            fetch('/api/notifications/count/')
+            fetch('/chat/api/notifications/count/')
                 .then(response => response.json())
                 .then(data => {
                     const badge = document.getElementById('notificationBadge');
@@ -331,7 +330,6 @@
                             badge.textContent = data.unread_count;
                             badge.style.display = 'inline';
                         } else {
-                            // Создаем бейдж, если его нет
                             const btn = document.querySelector('.notifications-btn');
                             const newBadge = document.createElement('span');
                             newBadge.className = 'notification-badge';

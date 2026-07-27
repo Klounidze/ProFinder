@@ -16,11 +16,14 @@ urlpatterns = [
     path('add/', user_views.add_provider, name='add_provider'),
     path('provider/<int:provider_id>/', user_views.provider_detail, name='provider_detail'),
     path('provider/<int:provider_id>/review/', user_views.add_review, name='add_review'),
+    path('provider/<int:provider_id>/add_photo/', user_views.add_provider_photo, name='add_provider_photo'),
+    path('provider/photo/<int:photo_id>/delete/', user_views.delete_provider_photo, name='delete_provider_photo'),
     path('chat/', include('chat.urls')),
     path('users/', include('users.urls')),
     path('reviews/', include('reviews.urls')),
     path('providers/', include('providers.urls')),
 ]
 
+# Для отдачи медиа-файлов в режиме разработки
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

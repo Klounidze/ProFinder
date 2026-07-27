@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth import authenticate
 from .models import User
 
 
@@ -13,6 +12,12 @@ class UserLoginForm(AuthenticationForm):
         label='Пароль',
         widget=forms.PasswordInput(attrs={'placeholder': 'Пароль', 'class': 'form-control'})
     )
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username:
+            return username.lower()
+        return username
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -33,6 +38,18 @@ class UserRegistrationForm(UserCreationForm):
             'username': forms.TextInput(attrs={'placeholder': 'Имя пользователя', 'class': 'form-control'}),
         }
 
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username:
+            return username.lower()
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            return email.lower()
+        return email
+
 
 class UserProfileForm(forms.ModelForm):
     class Meta:
@@ -42,5 +59,17 @@ class UserProfileForm(forms.ModelForm):
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'avatar': forms.FileInput(attrs={'class': 'form-control'}),
+            'avatar': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
         }
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username:
+            return username.lower()
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            return email.lower()
+        return email

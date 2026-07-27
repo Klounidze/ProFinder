@@ -1,0 +1,27 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>🎉 Добро пожаловать в ProFinder!</h2>
+
+<p>Здравствуйте, <strong>{{ user.username }}</strong>!</p>
+
+<p>Мы рады приветствовать вас в нашем сообществе профессионалов!</p>
+
+<div class="info-box">
+    <p><strong>Что вы можете делать на ProFinder:</strong></p>
+    <ul style="padding-left: 20px;">
+        <li>🔍 Находить профессионалов в любом городе</li>
+        <li>➕ Добавлять свои услуги и привлекать клиентов</li>
+        <li>💬 Общаться с клиентами в чате</li>
+        <li>⭐ Получать отзывы и улучшать рейтинг</li>
+    </ul>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ site_url }}" class="btn">🚀 Начать пользоваться</a>
+</p>
+
+<p style="font-size: 14px; color: #999;">
+    Если у вас есть вопросы, напишите нам на support@profinder.com
+</p>
+{% endblock %}

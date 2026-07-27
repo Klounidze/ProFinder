@@ -6,6 +6,7 @@ app_name = 'chat'
 urlpatterns = [
     # API для чатов
     path('api/with_provider/<int:provider_id>/', views.get_or_create_chat_with_provider, name='get_or_create_chat'),
+    path('api/with_user/<int:user_id>/', views.get_or_create_chat_with_user, name='get_or_create_chat_with_user'),
     path('api/<int:chat_id>/messages/', views.get_messages, name='get_messages'),
     path('api/<int:chat_id>/send/', views.send_message, name='send_message'),
 

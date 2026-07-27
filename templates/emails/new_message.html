@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>💬 Новое сообщение</h2>
+
+<p>Здравствуйте, <strong>{{ recipient.username }}</strong>!</p>
+
+<p>Вы получили новое сообщение от <strong>{{ sender.username }}</strong>:</p>
+
+<div class="info-box">
+    <p><strong>От:</strong> {{ sender.username }}</p>
+    <p><strong>Сообщение:</strong></p>
+    <p style="padding: 10px; background: #f1f1f1; border-radius: 6px;">
+        {{ message_preview }}
+    </p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ site_url }}/chat/{{ chat_id }}/" class="btn">💬 Ответить в чате</a>
+</p>
+
+<p style="font-size: 14px; color: #999;">
+    Если вы не можете перейти по ссылке, скопируйте этот адрес в браузер:<br>
+    {{ site_url }}/chat/{{ chat_id }}/
+</p>
+{% endblock %}

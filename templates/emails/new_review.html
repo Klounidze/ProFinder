@@ -1,0 +1,22 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>⭐ Новый отзыв</h2>
+
+<p>Здравствуйте, <strong>{{ recipient.username }}</strong>!</p>
+
+<p>На вашего специалиста <strong>{{ provider.full_name }}</strong> оставили новый отзыв:</p>
+
+<div class="info-box">
+    <p><strong>Оценка:</strong> {{ rating_stars }} ({{ review.rating }} из 5)</p>
+    <p><strong>Автор:</strong> {{ review.user.username }}</p>
+    <p><strong>Комментарий:</strong></p>
+    <p style="padding: 10px; background: #f1f1f1; border-radius: 6px;">
+        {{ review.comment|default:"Без комментария" }}
+    </p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ site_url }}/provider/{{ provider.id }}/" class="btn">👀 Посмотреть отзыв</a>
+</p>
+{% endblock %}
