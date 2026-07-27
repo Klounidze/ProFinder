@@ -7,7 +7,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Разрешаем все хосты для теста
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'pfinder-748d6.containers.snapdeploy.app',
+    'localhost',
+    '127.0.0.1',
+]
 # ИЛИ через переменную окружения
 # ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
