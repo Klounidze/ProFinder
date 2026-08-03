@@ -23,5 +23,8 @@ RUN python manage.py collectstatic --noinput
 # Открываем порт
 EXPOSE 8000
 
+CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 profinder_django.wsgi:application"]
+
+
 # Запускаем приложение через Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "profinder_django.wsgi:application"]
