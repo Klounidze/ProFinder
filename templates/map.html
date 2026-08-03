@@ -1,0 +1,495 @@
+<!-- templates/map.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Карта специалистов — ProFinder{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet CSS для маркеров с иконками -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<style>
+    #map {
+        width: 100%;
+        height: 600px;
+        border-radius: var(--hh-radius);
+        border: 1px solid #e0e0e0;
+        background: #f0f0f0;
+    }
+    .map-container {
+        background: var(--hh-white);
+        padding: 20px;
+        border-radius: var(--hh-radius-lg);
+        box-shadow: var(--hh-shadow);
+    }
+    .map-filters {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .map-filters select, .map-filters input {
+        padding: 8px 14px;
+        border: 2px solid #e0e0e0;
+        border-radius: var(--hh-radius);
+        font-size: 0.95rem;
+        min-width: 150px;
+    }
+    .map-filters select:focus, .map-filters input:focus {
+        border-color: var(--hh-accent);
+        outline: none;
+    }
+    .map-filters .btn {
+        padding: 8px 20px;
+    }
+    .balloon-content {
+        padding: 8px;
+        min-width: 180px;
+    }
+    .balloon-content h4 {
+        margin: 0 0 4px 0;
+        font-size: 1rem;
+        color: #2d3436;
+    }
+    .balloon-content .category {
+        color: #7f8c8d;
+        font-size: 0.85rem;
+    }
+    .balloon-content .rating {
+        color: #f39c12;
+        font-size: 0.85rem;
+    }
+    .balloon-content .verified {
+        color: #27ae60;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .balloon-content .btn-detail {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 4px 12px;
+        background: #e74c3c;
+        color: white;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: background 0.2s;
+    }
+    .balloon-content .btn-detail:hover {
+        background: #c0392b;
+        color: white;
+    }
+    .map-error {
+        text-align: center;
+        padding: 40px;
+        background: #fff3cd;
+        border-radius: var(--hh-radius);
+        margin: 20px 0;
+        border: 1px solid #ffc107;
+    }
+    .map-error h3 {
+        color: #856404;
+    }
+    .map-error p {
+        color: #856404;
+    }
+    .map-loading {
+        text-align: center;
+        padding: 100px 20px;
+        color: #999;
+    }
+    .map-loading .spinner {
+        font-size: 2rem;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .custom-marker {
+        background: #e74c3c;
+        border-radius: 50% 50% 50% 0;
+        width: 30px;
+        height: 30px;
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .custom-marker.verified {
+        background: #27ae60;
+    }
+    .custom-marker .marker-text {
+        transform: rotate(45deg);
+        color: white;
+        font-weight: 700;
+        font-size: 12px;
+    }
+    @media (max-width: 768px) {
+        .map-filters {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .map-filters select, .map-filters input {
+            min-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📍 Карта специалистов</h1>
+    <p>Найдите профессионалов рядом с вами</p>
+</div>
+
+<div class="map-container">
+    <div class="map-filters">
+        <select id="categoryFilter">
+            <option value="">Все категории</option>
+            {% for category in categories %}
+            <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" id="searchInput" placeholder="Поиск по имени..." />
+        <button class="btn btn-primary" onclick="filterMarkers()">🔍 Найти</button>
+        <button class="btn btn-secondary" onclick="showMyLocation()">📍 Моё местоположение</button>
+        <button class="btn btn-secondary" onclick="resetMap()">🔄 Сбросить</button>
+    </div>
+
+    <div id="map">
+        <div class="map-loading">
+            <div class="spinner">🗺️</div>
+            <p>Загрузка карты...</p>
+        </div>
+    </div>
+
+    <!-- Сообщение об ошибке -->
+    <div id="mapError" class="map-error" style="display:none;">
+        <h3>⚠️ Не удалось загрузить карту</h3>
+        <p>Проверьте подключение к интернету и обновите страницу</p>
+    </div>
+
+    <!-- Информация о количестве специалистов -->
+    <div style="margin-top: 16px; text-align: center; color: var(--hh-gray); font-size: 0.9rem;">
+        <span id="providersCount">Загрузка...</span>
+    </div>
+</div>
+
+<!-- Подключаем Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+    // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+    let map;
+    let markers = [];
+    let allProviders = [];
+    let markerCluster;
+    let userLocationMarker = null;
+
+    // ===== ИНИЦИАЛИЗАЦИЯ КАРТЫ =====
+    function initMap() {
+        try {
+            map = L.map('map').setView([55.7558, 37.6173], 10);
+
+            // Добавляем слой OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+                minZoom: 3
+            }).addTo(map);
+
+            // Создаем кластеризатор маркеров
+            markerCluster = L.markerClusterGroup({
+                maxClusterRadius: 50,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true
+            });
+
+            map.addLayer(markerCluster);
+
+            // Загружаем данные
+            loadProviders();
+
+        } catch (error) {
+            console.error('Ошибка инициализации карты:', error);
+            document.getElementById('mapError').style.display = 'block';
+            document.querySelector('.map-loading').style.display = 'none';
+        }
+    }
+
+    // ===== ЗАГРУЗКА ДАННЫХ =====
+    function loadProviders() {
+        fetch('/api/v1/providers/map/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(providers => {
+                allProviders = providers;
+                document.getElementById('providersCount').textContent =
+                    `📍 Найдено ${providers.length} специалистов на карте`;
+
+                if (providers.length === 0) {
+                    document.getElementById('map').innerHTML = `
+                        <div style="text-align:center;padding:100px 20px;color:#999;">
+                            <p style="font-size:2rem;">📍</p>
+                            <h3>Нет специалистов на карте</h3>
+                            <p>Добавьте специалистов с адресами, чтобы они появились на карте</p>
+                            <a href="/add/" class="btn btn-primary" style="margin-top:16px;">➕ Добавить специалиста</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                addMarkers(providers);
+                document.querySelector('.map-loading').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки:', error);
+                document.getElementById('mapError').style.display = 'block';
+                document.querySelector('.map-loading').style.display = 'none';
+                document.getElementById('providersCount').textContent = '❌ Ошибка загрузки данных';
+            });
+    }
+
+    // ===== СОЗДАНИЕ МАРКЕРОВ =====
+    function addMarkers(providers) {
+        // Очищаем старые маркеры
+        markerCluster.clearLayers();
+        markers = [];
+
+        providers.forEach(provider => {
+            // Создаем HTML для балуна
+            const popupContent = `
+                <div class="balloon-content">
+                    <h4>${provider.full_name}</h4>
+                    <div class="category">${provider.category}</div>
+                    ${provider.rating ? `<div class="rating">⭐ ${provider.rating}</div>` : ''}
+                    ${provider.is_verified ? '<div class="verified">✅ Проверен</div>' : ''}
+                    ${provider.address ? `<div style="font-size:0.8rem;color:#7f8c8d;margin-top:4px;">📍 ${provider.address}</div>` : ''}
+                    <div style="margin-top:8px;">
+                        <a href="/provider/${provider.id}" class="btn-detail">Подробнее →</a>
+                    </div>
+                </div>
+            `;
+
+            // Создаем кастомную иконку
+            const iconColor = provider.is_verified ? '#27ae60' : '#e74c3c';
+            const iconHtml = `
+                <div class="custom-marker ${provider.is_verified ? 'verified' : ''}"
+                     style="background: ${iconColor};">
+                    <span class="marker-text">${provider.full_name.charAt(0).toUpperCase()}</span>
+                </div>
+            `;
+
+            const icon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30]
+            });
+
+            // Создаем маркер
+            const marker = L.marker(
+                [provider.latitude, provider.longitude],
+                { icon: icon }
+            )
+            .bindPopup(popupContent, {
+                maxWidth: 300,
+                className: 'custom-popup'
+            })
+            .on('click', function() {
+                // При клике открываем попап
+                this.openPopup();
+            });
+
+            markers.push(marker);
+            markerCluster.addLayer(marker);
+        });
+
+        // Масштабируем карту под все маркеры
+        if (markers.length > 0) {
+            const bounds = markerCluster.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {
+                    padding: [50, 50],
+                    maxZoom: 15
+                });
+            }
+        }
+    }
+
+    // ===== ФИЛЬТРАЦИЯ МАРКЕРОВ =====
+    function filterMarkers() {
+        const category = document.getElementById('categoryFilter').value;
+        const search = document.getElementById('searchInput').value.toLowerCase();
+
+        let filtered = allProviders;
+
+        if (category) {
+            filtered = filtered.filter(p => p.category === category);
+        }
+        if (search) {
+            filtered = filtered.filter(p =>
+                p.full_name.toLowerCase().includes(search)
+            );
+        }
+
+        document.getElementById('providersCount').textContent =
+            `📍 Найдено ${filtered.length} специалистов`;
+
+        if (filtered.length === 0) {
+            markerCluster.clearLayers();
+            document.getElementById('map').innerHTML = `
+                <div style="text-align:center;padding:100px 20px;color:#999;">
+                    <p style="font-size:2rem;">🔍</p>
+                    <h3>Ничего не найдено</h3>
+                    <p>Попробуйте изменить параметры поиска</p>
+                    <button class="btn btn-secondary" onclick="resetMap()" style="margin-top:16px;">🔄 Сбросить</button>
+                </div>
+            `;
+            return;
+        }
+
+        // Восстанавливаем карту если она была заменена
+        if (!document.getElementById('map').querySelector('.leaflet-container')) {
+            document.getElementById('map').innerHTML = '';
+            initMap();
+            setTimeout(() => addMarkers(filtered), 500);
+        } else {
+            addMarkers(filtered);
+        }
+    }
+
+    // ===== СБРОС КАРТЫ =====
+    function resetMap() {
+        document.getElementById('categoryFilter').value = '';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('map').innerHTML = '';
+        document.querySelector('.map-loading').style.display = 'block';
+        document.getElementById('mapError').style.display = 'none';
+
+        // Пересоздаем карту
+        setTimeout(() => {
+            initMap();
+        }, 300);
+    }
+
+    // ===== МОЁ МЕСТОПОЛОЖЕНИЕ =====
+    function showMyLocation() {
+        if (!navigator.geolocation) {
+            alert('Геолокация не поддерживается вашим браузером');
+            return;
+        }
+
+        // Удаляем старую метку
+        if (userLocationMarker) {
+            map.removeLayer(userLocationMarker);
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const coords = [lat, lng];
+
+                // Центрируем карту
+                map.setView(coords, 15);
+
+                // Создаем метку местоположения
+                const userIcon = L.divIcon({
+                    html: `<div style="background: #3498db; border-radius: 50%; width: 20px; height: 20px; border: 3px solid white; box-shadow: 0 0 10px rgba(52,152,219,0.5);"></div>`,
+                    className: '',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+
+                userLocationMarker = L.marker(coords, {
+                    icon: userIcon,
+                    zIndexOffset: 1000
+                })
+                .bindPopup('📍 Вы здесь')
+                .addTo(map);
+
+                // Добавляем круг радиуса
+                L.circle(coords, {
+                    radius: 500,
+                    color: '#3498db',
+                    fillColor: '#3498db',
+                    fillOpacity: 0.1,
+                    weight: 1
+                }).addTo(map);
+            },
+            error => {
+                alert('Не удалось определить местоположение. Проверьте настройки геолокации.');
+                console.error('Geolocation error:', error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    }
+
+    // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
+    document.getElementById('categoryFilter').addEventListener('change', filterMarkers);
+    document.getElementById('searchInput').addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            filterMarkers();
+        }
+    });
+
+    // ===== ЗАПУСК =====
+    document.addEventListener('DOMContentLoaded', function() {
+        // Небольшая задержка для корректного отображения
+        setTimeout(initMap, 500);
+    });
+
+    // При изменении размера окна, перерисовываем карту
+    window.addEventListener('resize', function() {
+        if (map) {
+            setTimeout(() => map.invalidateSize(), 300);
+        }
+    });
+</script>
+
+<!-- Дополнительные стили для попапов -->
+<style>
+    .custom-popup .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 0;
+    }
+    .custom-popup .leaflet-popup-content {
+        margin: 0;
+        padding: 0;
+        min-width: 180px;
+    }
+    .custom-popup .leaflet-popup-tip {
+        background: white;
+    }
+    .leaflet-marker-icon {
+        transition: transform 0.2s;
+    }
+    .leaflet-marker-icon:hover {
+        transform: scale(1.1);
+        z-index: 999 !important;
+    }
+    .leaflet-cluster-anim .leaflet-marker-icon,
+    .leaflet-cluster-anim .leaflet-marker-shadow {
+        transition: transform 0.3s ease-out, opacity 0.3s ease-in;
+    }
+</style>
+{% endblock %}

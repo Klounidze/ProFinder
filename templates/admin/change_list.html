@@ -1,0 +1,13 @@
+<!-- templates/admin/change_list.html (переопределяем) -->
+<!-- Создаем файл: templates/admin/providers/change_list.html -->
+
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="geocode-all/" class="button" style="background: #27ae60; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; display: inline-block;">
+            📍 Определить координаты для всех
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}

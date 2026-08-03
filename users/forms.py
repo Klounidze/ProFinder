@@ -1,6 +1,9 @@
+# users/forms.py
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from .models import User
+from providers.models import Provider
 
 
 class UserLoginForm(AuthenticationForm):
@@ -73,3 +76,40 @@ class UserProfileForm(forms.ModelForm):
         if email:
             return email.lower()
         return email
+
+
+class ProviderEditForm(forms.ModelForm):
+    """Форма редактирования специалиста"""
+    class Meta:
+        model = Provider
+        fields = [
+            'full_name', 'category', 'phone', 'email', 'address',
+            'country', 'city', 'description', 'tags',
+            'experience_years', 'price_from', 'price_to'
+        ]
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Иван Иванов'}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (XXX) XXX-XX-XX'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
+            'address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ул. Ленина, д. 10'}),
+            'country': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Россия'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Москва'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Описание услуг...'}),
+            'tags': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'тег1, тег2, тег3'}),
+            'experience_years': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': '0'}),
+            'price_from': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01', 'placeholder': '500'}),
+            'price_to': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': '0.01', 'placeholder': '2000'}),
+        }
+        labels = {
+            'experience_years': 'Опыт работы (лет)',
+            'price_from': 'Цена от (₽)',
+            'price_to': 'Цена до (₽)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.conf import settings
+        self.fields['category'].choices = [
+            ('', '-- Выберите категорию --')
+        ] + [(cat, cat) for cat in settings.CATEGORIES]

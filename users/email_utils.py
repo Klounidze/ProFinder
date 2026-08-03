@@ -1,3 +1,5 @@
+# users/email_utils.py
+
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -5,16 +7,11 @@ from django.conf import settings
 
 
 def send_email_notification(subject, template_name, context, recipient_list):
-    """
-    Отправка email-уведомления с HTML-шаблоном
-    """
+    """Отправка email-уведомления с HTML-шаблоном"""
     try:
-        # Рендерим HTML шаблон
         html_content = render_to_string(template_name, context)
-        # Создаем текстовую версию (без HTML)
         text_content = strip_tags(html_content)
 
-        # Создаем письмо
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
@@ -30,66 +27,68 @@ def send_email_notification(subject, template_name, context, recipient_list):
 
 
 def send_new_message_notification(message):
-    """
-    Уведомление о новом сообщении
-    """
-    chat = message.chat
-    recipient = chat.get_other_user(message.sender)
+    """Уведомление о новом сообщении"""
+    try:
+        chat = message.chat
+        recipient = chat.get_other_user(message.sender)
 
-    if not recipient.email:
+        if not recipient.email:
+            return False
+
+        subject = f"💬 Новое сообщение от {message.sender.username}"
+
+        context = {
+            'sender': message.sender,
+            'recipient': recipient,
+            'message': message,
+            'chat_id': chat.id,
+            'site_url': getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000'),
+            'message_preview': message.content[:100] + ('...' if len(message.content) > 100 else '')
+        }
+
+        return send_email_notification(
+            subject=subject,
+            template_name='emails/new_message.html',
+            context=context,
+            recipient_list=[recipient.email]
+        )
+    except Exception as e:
+        print(f"Ошибка отправки уведомления: {e}")
         return False
-
-    subject = f"💬 Новое сообщение от {message.sender.username}"
-
-    context = {
-        'sender': message.sender,
-        'recipient': recipient,
-        'message': message,
-        'chat_id': chat.id,
-        'site_url': 'http://127.0.0.1:8000',  # Замените на реальный URL
-        'message_preview': message.content[:100] + ('...' if len(message.content) > 100 else '')
-    }
-
-    return send_email_notification(
-        subject=subject,
-        template_name='emails/new_message.html',
-        context=context,
-        recipient_list=[recipient.email]
-    )
 
 
 def send_new_review_notification(review):
-    """
-    Уведомление о новом отзыве для владельца специалиста
-    """
-    provider = review.provider
-    recipient = provider.created_by
+    """Уведомление о новом отзыве"""
+    try:
+        provider = review.provider
+        recipient = provider.created_by
 
-    if not recipient.email:
+        if not recipient.email:
+            return False
+
+        subject = f"⭐ Новый отзыв о {provider.full_name}"
+
+        context = {
+            'review': review,
+            'provider': provider,
+            'recipient': recipient,
+            'site_url': getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000'),
+            'rating_stars': '⭐' * review.rating
+        }
+
+        return send_email_notification(
+            subject=subject,
+            template_name='emails/new_review.html',
+            context=context,
+            recipient_list=[recipient.email]
+        )
+    except Exception as e:
+        print(f"Ошибка отправки уведомления: {e}")
         return False
-
-    subject = f"⭐ Новый отзыв о {provider.full_name}"
-
-    context = {
-        'review': review,
-        'provider': provider,
-        'recipient': recipient,
-        'site_url': 'http://127.0.0.1:8000',
-        'rating_stars': '⭐' * review.rating
-    }
-
-    return send_email_notification(
-        subject=subject,
-        template_name='emails/new_review.html',
-        context=context,
-        recipient_list=[recipient.email]
-    )
 
 
 def send_welcome_email(user):
-    """
-    Приветственное письмо новому пользователю
-    """
+    """Приветственное письмо новому пользователю"""
     if not user.email:
         return False
 
@@ -97,7 +96,7 @@ def send_welcome_email(user):
 
     context = {
         'user': user,
-        'site_url': 'http://127.0.0.1:8000'
+        'site_url': getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
     }
 
     return send_email_notification(
@@ -109,9 +108,7 @@ def send_welcome_email(user):
 
 
 def send_provider_added_notification(provider):
-    """
-    Уведомление о добавлении нового специалиста (для администратора)
-    """
+    """Уведомление о добавлении нового специалиста (для администратора)"""
     from users.models import User
     admins = User.objects.filter(is_superuser=True)
 
@@ -122,8 +119,8 @@ def send_provider_added_notification(provider):
 
     context = {
         'provider': provider,
-        'site_url': 'http://127.0.0.1:8000',
-        'admin_url': 'http://127.0.0.1:8000/admin/providers/provider/'
+        'site_url': getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000'),
+        'admin_url': f"{getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')}/admin/providers/provider/"
     }
 
     admin_emails = [admin.email for admin in admins if admin.email]

@@ -1,3 +1,4 @@
+<!-- templates/provider_detail.html -->
 {% extends "base.html" %}
 
 {% block title %}{{ provider.full_name }} — ProFinder{% endblock %}
@@ -6,7 +7,12 @@
 <div class="provider-detail">
     <div class="detail-header">
         <h1>{{ provider.full_name }}</h1>
-        <a href="{% url 'index' %}" class="back-link">← Назад</a>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <a href="{% url 'index' %}" class="back-link">← Назад</a>
+            {% if user.is_authenticated and user == provider.created_by %}
+                <a href="{% url 'edit_provider' provider.id %}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">✏️ Редактировать</a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="detail-card">
@@ -19,6 +25,26 @@
             <div>
                 <div class="label">Категория</div>
                 <div class="value"><span class="category-tag">{{ provider.category }}</span></div>
+            </div>
+
+            <div>
+                <div class="label">Опыт работы</div>
+                <div class="value">{{ provider.experience_years|default:"Не указан" }} лет</div>
+            </div>
+
+            <div>
+                <div class="label">Цена</div>
+                <div class="value">
+                    {% if provider.price_from and provider.price_to %}
+                        {{ provider.price_from }} ₽ - {{ provider.price_to }} ₽
+                    {% elif provider.price_from %}
+                        от {{ provider.price_from }} ₽
+                    {% elif provider.price_to %}
+                        до {{ provider.price_to }} ₽
+                    {% else %}
+                        Не указана
+                    {% endif %}
+                </div>
             </div>
 
             <div>
@@ -35,6 +61,20 @@
                         </span>
                     {% else %}
                         <span style="color: var(--hh-gray);">Нет оценки</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <div class="label">Статус</div>
+                <div class="value">
+                    {% if provider.is_verified %}
+                        <span class="verified">✅ Проверен</span>
+                    {% else %}
+                        <span style="color: var(--hh-gray);">⏳ На проверке</span>
+                    {% endif %}
+                    {% if not provider.is_active %}
+                        <span style="color: var(--hh-danger);">🔴 Неактивен</span>
                     {% endif %}
                 </div>
             </div>
@@ -175,41 +215,116 @@
         {% endwith %}
     </div>
 
+    <!-- Добавление отзыва -->
     {% if user.is_authenticated and provider.is_active %}
-    <div class="add-review">
-        <h4>📝 Оставить отзыв</h4>
-        <form method="POST" action="{% url 'add_review' provider.id %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label>Оценка</label>
-                <select name="rating" class="form-control" required>
-                    <option value="5">⭐⭐⭐⭐⭐ — Отлично</option>
-                    <option value="4">⭐⭐⭐⭐ — Хорошо</option>
-                    <option value="3">⭐⭐⭐ — Нормально</option>
-                    <option value="2">⭐⭐ — Плохо</option>
-                    <option value="1">⭐ — Ужасно</option>
-                </select>
+        {% if user != provider.created_by %}
+            <div class="add-review">
+                <h4>📝 Оставить отзыв</h4>
+                <form method="POST" action="{% url 'add_review' provider.id %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label>Оценка</label>
+                        <select name="rating" class="form-control" required>
+                            <option value="5">⭐⭐⭐⭐⭐ — Отлично</option>
+                            <option value="4">⭐⭐⭐⭐ — Хорошо</option>
+                            <option value="3">⭐⭐⭐ — Нормально</option>
+                            <option value="2">⭐⭐ — Плохо</option>
+                            <option value="1">⭐ — Ужасно</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Комментарий</label>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Расскажите о вашем опыте..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Отправить отзыв</button>
+                </form>
             </div>
-            <div class="form-group">
-                <label>Комментарий</label>
-                <textarea name="comment" class="form-control" rows="3" placeholder="Расскажите о вашем опыте..."></textarea>
+        {% else %}
+            <div class="add-review" style="background: #f8f9fa; text-align: center; padding: 20px;">
+                <p style="color: var(--hh-gray);">Вы не можете оставить отзыв на собственного специалиста</p>
             </div>
-            <button type="submit" class="btn btn-primary">Отправить отзыв</button>
-        </form>
-    </div>
+        {% endif %}
     {% elif not user.is_authenticated %}
-    <div class="add-review">
-        <p class="hint" style="padding: 20px;">🔑 <a href="{% url 'login' %}">Войдите</a>, чтобы оставить отзыв</p>
-    </div>
+        <div class="add-review">
+            <p class="hint" style="padding: 20px;">🔑 <a href="{% url 'login' %}">Войдите</a>, чтобы оставить отзыв</p>
+        </div>
     {% elif not provider.is_active %}
-    <div class="add-review">
-        <p class="hint" style="padding: 20px;">⛔ Этот специалист временно недоступен</p>
-    </div>
+        <div class="add-review">
+            <p class="hint" style="padding: 20px;">⛔ Этот специалист временно недоступен</p>
+        </div>
     {% endif %}
 </div>
 
 <style>
-/* Фото портфолио */
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.detail-header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.back-link {
+    color: var(--hh-gray);
+    font-weight: 500;
+}
+
+.back-link:hover {
+    color: var(--hh-primary);
+}
+
+.detail-card {
+    background: var(--hh-white);
+    padding: 28px 32px;
+    border-radius: var(--hh-radius);
+    border: 1px solid #e0e0e0;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+}
+
+.detail-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-grid .label {
+    font-weight: 600;
+    color: var(--hh-gray);
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+}
+
+.detail-grid .value {
+    font-size: 0.95rem;
+}
+
+.detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.detail-tags .tag {
+    color: var(--hh-gray);
+    font-size: 0.85rem;
+}
+
+.divider {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 4px 0;
+}
+
 .photos-section {
     margin-top: 36px;
     background: var(--hh-white);
@@ -308,7 +423,107 @@
     outline: none;
 }
 
+.reviews-section {
+    margin-top: 32px;
+    background: var(--hh-white);
+    padding: 28px 32px;
+    border-radius: var(--hh-radius);
+    border: 1px solid #e0e0e0;
+}
+
+.reviews-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.review-item {
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.review-item:last-child {
+    border-bottom: none;
+}
+
+.review-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.review-author {
+    font-weight: 600;
+}
+
+.review-rating {
+    color: var(--hh-warning);
+}
+
+.review-date {
+    color: var(--hh-gray);
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.review-comment {
+    color: var(--hh-primary);
+}
+
+.add-review {
+    margin-top: 24px;
+    background: var(--hh-white);
+    padding: 24px 32px;
+    border-radius: var(--hh-radius);
+    border: 1px solid #e0e0e0;
+}
+
+.add-review h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.add-review .form-group {
+    margin-bottom: 12px;
+}
+
+.add-review .form-group label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--hh-primary);
+    margin-bottom: 4px;
+}
+
+.add-review .form-group select,
+.add-review .form-group textarea {
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--hh-radius);
+    font-size: 0.95rem;
+    transition: var(--hh-transition);
+    font-family: inherit;
+    width: 100%;
+    background: var(--hh-white);
+}
+
+.add-review .form-group select:focus,
+.add-review .form-group textarea:focus {
+    border-color: var(--hh-accent);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+    outline: none;
+}
+
 @media (max-width: 768px) {
+    .detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
     .photos-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }

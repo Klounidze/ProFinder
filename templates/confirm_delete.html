@@ -1,0 +1,70 @@
+<!-- templates/confirm_delete.html -->
+{% extends "base.html" %}
+
+{% block title %}Подтверждение удаления — ProFinder{% endblock %}
+
+{% block content %}
+<div class="confirm-delete-container">
+    <div class="confirm-delete-card">
+        <div style="text-align: center; font-size: 4rem; margin-bottom: 16px;">⚠️</div>
+        <h2>Подтверждение удаления</h2>
+        <p class="subtitle">Вы уверены, что хотите удалить {{ type }}?</p>
+
+        <div style="background: #f8f9fa; padding: 16px; border-radius: var(--hh-radius); margin: 16px 0;">
+            <strong>{{ provider.full_name }}</strong>
+            <div style="color: var(--hh-gray); font-size: 0.9rem;">{{ provider.category }}</div>
+            <div style="color: var(--hh-gray); font-size: 0.9rem;">{{ provider.country }}{% if provider.city %}, {{ provider.city }}{% endif %}</div>
+        </div>
+
+        <p style="color: var(--hh-danger); font-weight: 600;">Это действие необратимо! Все данные будут потеряны.</p>
+
+        <div class="form-actions">
+            <form method="POST" action="{% url 'delete_provider' provider.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">🗑️ Да, удалить</button>
+            </form>
+            <a href="{% url 'provider_detail' provider.id %}" class="btn btn-secondary">← Отмена</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.confirm-delete-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+    padding: 20px;
+}
+
+.confirm-delete-card {
+    background: var(--hh-white);
+    padding: 40px 36px;
+    border-radius: var(--hh-radius-lg);
+    box-shadow: var(--hh-shadow);
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid #e0e0e0;
+}
+
+.confirm-delete-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--hh-primary);
+}
+
+.confirm-delete-card .subtitle {
+    text-align: center;
+    color: var(--hh-gray);
+    margin-bottom: 16px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+</style>
+{% endblock %}

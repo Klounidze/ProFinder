@@ -1,0 +1,220 @@
+<!-- templates/edit_provider.html -->
+{% extends "base.html" %}
+
+{% block title %}Редактировать специалиста — ProFinder{% endblock %}
+
+{% block content %}
+<div class="edit-provider-container">
+    <div class="edit-provider-card">
+        <h2>✏️ Редактировать специалиста</h2>
+        <p class="subtitle">Измените информацию о {{ provider.full_name }}</p>
+
+        <form method="POST" action="{% url 'edit_provider' provider.id %}">
+            {% csrf_token %}
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.full_name.id_for_label }}">Имя специалиста *</label>
+                    {{ form.full_name }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.category.id_for_label }}">Категория *</label>
+                    {{ form.category }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}">Телефон</label>
+                    {{ form.phone }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">Email</label>
+                    {{ form.email }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.tags.id_for_label }}">Теги</label>
+                    {{ form.tags }}
+                    <small style="color: var(--text-muted); font-size: 0.8rem;">Введите теги через запятую</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.country.id_for_label }}">Страна *</label>
+                    {{ form.country }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.city.id_for_label }}">Город</label>
+                    {{ form.city }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.address.id_for_label }}">Адрес</label>
+                    {{ form.address }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.experience_years.id_for_label }}">Опыт работы (лет)</label>
+                    {{ form.experience_years }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.price_from.id_for_label }}">Цена от (₽)</label>
+                    {{ form.price_from }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.price_to.id_for_label }}">Цена до (₽)</label>
+                    {{ form.price_to }}
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="{{ form.description.id_for_label }}">Описание</label>
+                    {{ form.description }}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 Сохранить изменения</button>
+                <a href="{% url 'provider_detail' provider.id %}" class="btn btn-secondary">← Назад</a>
+            </div>
+        </form>
+
+        <hr style="margin: 30px 0;">
+
+        <div class="danger-zone">
+            <h3 style="color: var(--hh-danger);">⚠️ Опасная зона</h3>
+            <p style="color: var(--hh-gray);">Удаление специалиста приведет к потере всех данных, включая отзывы и фотографии.</p>
+            <form method="POST" action="{% url 'delete_provider' provider.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены, что хотите удалить специалиста {{ provider.full_name }}? Это действие необратимо!')">
+                    🗑️ Удалить специалиста
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.edit-provider-container {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.edit-provider-card {
+    background: var(--hh-white);
+    padding: 40px 36px;
+    border-radius: var(--hh-radius-lg);
+    box-shadow: var(--hh-shadow);
+    width: 100%;
+    max-width: 800px;
+    border: 1px solid #e0e0e0;
+}
+
+.edit-provider-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--hh-primary);
+}
+
+.edit-provider-card .subtitle {
+    text-align: center;
+    color: var(--hh-gray);
+    margin-bottom: 28px;
+    font-size: 0.9rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--hh-primary);
+    margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--hh-radius);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    width: 100%;
+    background: var(--hh-white);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--hh-accent);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+    outline: none;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+.danger-zone {
+    background: #fdf2f2;
+    padding: 20px;
+    border-radius: var(--hh-radius);
+    border: 2px solid #f5c6cb;
+}
+
+.danger-zone h3 {
+    margin-top: 0;
+}
+
+.btn-danger {
+    background: var(--hh-danger);
+    color: white;
+    padding: 10px 24px;
+    border: none;
+    border-radius: var(--hh-radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    .edit-provider-card {
+        padding: 24px 16px;
+    }
+}
+</style>
+{% endblock %}

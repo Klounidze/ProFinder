@@ -1,3 +1,4 @@
+<!-- templates/profile.html -->
 {% extends "base.html" %}
 
 {% block title %}Личный кабинет — ProFinder{% endblock %}
@@ -66,6 +67,10 @@
             <h3>📊 Статистика</h3>
             <div class="stats-grid">
                 <div class="stat-item">
+                    <span class="stat-number">{{ stats.providers_count }}</span>
+                    <span class="stat-label">Специалистов</span>
+                </div>
+                <div class="stat-item">
                     <span class="stat-number">{{ stats.reviews_count }}</span>
                     <span class="stat-label">Всего отзывов</span>
                 </div>
@@ -81,6 +86,10 @@
                     <span class="stat-number">{{ stats.messages_count }}</span>
                     <span class="stat-label">Сообщений</span>
                 </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ stats.unread_count }}</span>
+                    <span class="stat-label">Непрочитанных</span>
+                </div>
             </div>
         </div>
 
@@ -89,8 +98,182 @@
             <div class="actions-grid">
                 <a href="{% url 'add_provider' %}" class="action-btn">➕ Добавить специалиста</a>
                 <a href="{% url 'index' %}" class="action-btn">🔍 Поиск специалистов</a>
+                <a href="{% url 'favorites' %}" class="action-btn">❤️ Избранное</a>
+                <a href="/chat/" class="action-btn">💬 Чаты</a>
             </div>
+        </div>
+
+        <!-- Мои специалисты -->
+        <div class="profile-card full-width">
+            <h3>👨‍💼 Мои специалисты</h3>
+            {% if user.providers.all %}
+                <div style="display: grid; gap: 12px; margin-top: 12px;">
+                    {% for provider in user.providers.all %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--hh-gray-lighter); border-radius: var(--hh-radius);">
+                            <div>
+                                <strong>{{ provider.full_name }}</strong>
+                                <span style="color: var(--hh-gray); font-size: 0.9rem;"> — {{ provider.category }}</span>
+                                <div style="font-size: 0.8rem; color: var(--hh-gray);">
+                                    {{ provider.country }}{% if provider.city %}, {{ provider.city }}{% endif %}
+                                    {% if provider.rating %} ⭐ {{ provider.rating }}{% endif %}
+                                    {% if provider.experience_years %} 💼 {{ provider.experience_years }} лет{% endif %}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{% url 'provider_detail' provider.id %}" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;">👁️</a>
+                                <a href="{% url 'edit_provider' provider.id %}" class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem;">✏️</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--hh-gray); text-align: center; padding: 20px;">
+                    У вас пока нет добавленных специалистов.<br>
+                    <a href="{% url 'add_provider' %}" class="btn btn-primary" style="margin-top: 12px;">➕ Добавить специалиста</a>
+                </p>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<style>
+.profile-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.profile-header {
+    background: var(--hh-white);
+    padding: 24px 32px;
+    border-radius: var(--hh-radius);
+    border: 1px solid #e0e0e0;
+    margin-bottom: 24px;
+}
+
+.profile-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.profile-card {
+    background: var(--hh-white);
+    padding: 24px 28px;
+    border-radius: var(--hh-radius);
+    border: 1px solid #e0e0e0;
+}
+
+.profile-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.profile-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--hh-primary);
+}
+
+.profile-info .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.profile-info .info-row:last-child {
+    border-bottom: none;
+}
+
+.profile-info .label {
+    color: var(--hh-gray);
+    font-size: 0.9rem;
+}
+
+.profile-info .value {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.badge {
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 12px;
+    background: var(--hh-gray-lighter);
+    border-radius: var(--hh-radius);
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--hh-primary);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--hh-gray);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+}
+
+.action-btn {
+    display: block;
+    padding: 12px;
+    text-align: center;
+    background: var(--hh-gray-lighter);
+    border-radius: var(--hh-radius);
+    font-weight: 500;
+    color: var(--hh-primary);
+    transition: var(--hh-transition);
+}
+
+.action-btn:hover {
+    background: var(--hh-accent-light);
+    color: var(--hh-accent);
+}
+
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .actions-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
 {% endblock %}

@@ -1,0 +1,231 @@
+<!-- templates/favorites.html -->
+{% extends "base.html" %}
+
+{% block title %}Избранное — ProFinder{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>❤️ Избранные специалисты</h1>
+    <p>Список ваших любимых профессионалов</p>
+</div>
+
+{% if favorites %}
+    <div class="provider-grid">
+        {% for favorite in favorites %}
+        <div class="provider-card">
+            <div class="card-left">
+                <div class="avatar">{{ favorite.provider.full_name|slice:":1"|upper }}</div>
+                <div class="main-info">
+                    <h3><a href="{% url 'provider_detail' favorite.provider.id %}">{{ favorite.provider.full_name }}</a></h3>
+                    <div class="tags">
+                        <span class="category-tag">{{ favorite.provider.category }}</span>
+                        {% if favorite.provider.rating %}
+                        <span class="rating">⭐ {{ favorite.provider.rating }}</span>
+                        {% endif %}
+                        {% if favorite.provider.is_verified %}
+                        <span class="verified">✓ Проверен</span>
+                        {% endif %}
+                    </div>
+                    <div class="location">📍 {{ favorite.provider.country }}{% if favorite.provider.city %}, {{ favorite.provider.city }}{% endif %}</div>
+                    {% if favorite.provider.experience_years %}
+                    <div style="font-size:0.85rem; color: var(--hh-gray);">💼 Опыт: {{ favorite.provider.experience_years }} лет</div>
+                    {% endif %}
+                    {% if favorite.provider.price_from or favorite.provider.price_to %}
+                    <div style="font-size:0.85rem; color: var(--hh-gray);">
+                        💰 {% if favorite.provider.price_from and favorite.provider.price_to %}
+                            {{ favorite.provider.price_from }}₽ - {{ favorite.provider.price_to }}₽
+                        {% elif favorite.provider.price_from %}
+                            от {{ favorite.provider.price_from }}₽
+                        {% elif favorite.provider.price_to %}
+                            до {{ favorite.provider.price_to }}₽
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-right">
+                <a href="{% url 'provider_detail' favorite.provider.id %}" class="btn-detail">Подробнее →</a>
+                <button class="chat-btn" onclick="openChatModal({{ favorite.provider.id }}, '{{ favorite.provider.full_name }}')">
+                    💬 Написать
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="hint" style="text-align:center; padding:60px 20px;">
+        <p style="font-size:2rem;">😊</p>
+        <h3>У вас пока нет избранных специалистов</h3>
+        <p style="color: var(--hh-gray);">Найдите специалиста и добавьте его в избранное ❤️</p>
+        <a href="{% url 'index' %}" class="btn btn-primary" style="margin-top:16px;">🔍 Найти специалистов</a>
+    </div>
+{% endif %}
+
+<script>
+// Функции чата из index.html
+let currentChatId = null;
+let chatMessages = [];
+let chatPollingInterval = null;
+let currentUserId = {{ user.id|default:0 }};
+
+function openChatModal(providerId, providerName) {
+    document.getElementById('chatModalTitle').textContent = `💬 Чат с ${providerName}`;
+    document.getElementById('chatModalMessages').innerHTML = '<div class="no-messages-hint">⏳ Загрузка...</div>';
+    document.getElementById('chatModalInput').value = '';
+    document.getElementById('chatModal').classList.add('active');
+
+    fetch(`/chat/api/with_provider/${providerId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('chatModalMessages').innerHTML = `<div class="no-messages-hint" style="color: red;">❌ ${data.error}</div>`;
+            return;
+        }
+        currentChatId = data.chat_id;
+        loadMessages();
+        startPolling();
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        document.getElementById('chatModalMessages').innerHTML = '<div class="no-messages-hint" style="color: red;">❌ Ошибка загрузки чата</div>';
+    });
+}
+
+function closeChatModal() {
+    document.getElementById('chatModal').classList.remove('active');
+    if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+        chatPollingInterval = null;
+    }
+    currentChatId = null;
+    chatMessages = [];
+}
+
+function loadMessages() {
+    if (!currentChatId) return;
+    fetch(`/chat/api/${currentChatId}/messages/`)
+        .then(response => response.json())
+        .then(messages => {
+            chatMessages = messages;
+            renderMessages();
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки сообщений:', error);
+        });
+}
+
+function renderMessages() {
+    const container = document.getElementById('chatModalMessages');
+    if (!chatMessages || chatMessages.length === 0) {
+        container.innerHTML = '<div class="no-messages-hint">Нет сообщений</div>';
+        return;
+    }
+    let html = '';
+    chatMessages.forEach(msg => {
+        const isOwn = msg.sender_id === currentUserId;
+        html += `
+            <div class="chat-modal-message ${isOwn ? 'own' : 'other'}">
+                <strong>${isOwn ? 'Вы' : msg.sender_name}:</strong>
+                ${msg.content}
+                <div style="font-size:0.65rem; color: #999; margin-top:2px;">${formatDate(msg.created_at)}</div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatModalInput');
+    const content = input.value.trim();
+    if (!content || !currentChatId) return;
+    input.disabled = true;
+    fetch(`/chat/api/${currentChatId}/send/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => response.json())
+    .then(message => {
+        if (message.error) {
+            alert(message.error);
+            return;
+        }
+        chatMessages.push(message);
+        renderMessages();
+        input.value = '';
+        input.disabled = false;
+        input.focus();
+    })
+    .catch(error => {
+        console.error('Ошибка отправки:', error);
+        input.disabled = false;
+    });
+}
+
+function startPolling() {
+    if (chatPollingInterval) clearInterval(chatPollingInterval);
+    chatPollingInterval = setInterval(() => {
+        if (currentChatId) {
+            fetch(`/chat/api/${currentChatId}/messages/`)
+                .then(response => response.json())
+                .then(messages => {
+                    if (messages.length !== chatMessages.length) {
+                        chatMessages = messages;
+                        renderMessages();
+                    }
+                })
+                .catch(() => {});
+        }
+    }, 3000);
+}
+
+function formatDate(isoString) {
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return isoString;
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+document.getElementById('chatModal').addEventListener('click', function(e) {
+    if (e.target === this) closeChatModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('chatModal').classList.contains('active')) {
+        closeChatModal();
+    }
+});
+</script>
+{% endblock %}

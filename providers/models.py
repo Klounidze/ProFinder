@@ -1,6 +1,11 @@
+# providers/models.py
+
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 
 def provider_photo_path(instance, filename):
@@ -25,6 +30,26 @@ class Provider(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Дополнительные поля
+    experience_years = models.IntegerField(
+        default=0,
+        verbose_name='Опыт работы (лет)'
+    )
+    price_from = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Цена от'
+    )
+    price_to = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Цена до'
+    )
+
     def get_tags_list(self):
         if self.tags:
             return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
@@ -32,15 +57,14 @@ class Provider(models.Model):
 
     def calculate_rating(self):
         from reviews.models import Review
-        reviews = Review.objects.filter(provider=self)
+        reviews = Review.objects.filter(provider=self, is_approved=True)
         if reviews.exists():
             avg = sum(r.rating for r in reviews) / reviews.count()
             self.rating = round(avg, 1)
-            self.save()
+            self.save(update_fields=['rating'])
         return self.rating
 
     def get_main_photo(self):
-        """Получить основное фото портфолио"""
         photo = self.photos.filter(is_main=True).first()
         if photo:
             return photo
@@ -62,7 +86,41 @@ class ProviderPhoto(models.Model):
         return f"Photo for {self.provider.full_name}"
 
     def save(self, *args, **kwargs):
-        # Если это первое фото, делаем его основным
         if not self.pk and not self.provider.photos.exists():
             self.is_main = True
+
+        if self.image:
+            self._process_image()
+
         super().save(*args, **kwargs)
+
+    def _process_image(self):
+        """Обработка и оптимизация фото"""
+        try:
+            img = Image.open(self.image)
+
+            if img.mode in ('RGBA', 'LA'):
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[-1])
+                img = background
+
+            max_size = 1200
+            if max(img.size) > max_size:
+                ratio = max_size / max(img.size)
+                new_size = (int(img.size[0] * ratio), int(img.size[1] * ratio))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=85, optimize=True)
+            output.seek(0)
+
+            self.image = InMemoryUploadedFile(
+                output,
+                'ImageField',
+                self.image.name.replace('.', '_optimized.'),
+                'image/jpeg',
+                sys.getsizeof(output),
+                None
+            )
+        except Exception as e:
+            print(f"Ошибка обработки фото: {e}")
