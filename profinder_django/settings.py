@@ -1,33 +1,47 @@
-# profinder_django/settings.py
+"""
+Django settings for profinder_django project.
+"""
 
 import os
+import dj_database_url
 from pathlib import Path
-from datetime import timedelta
-from dotenv import load_dotenv
 
-# ===== ПУТЬ К ПРОЕКТУ =====
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Загружаем .env
-env_path = BASE_DIR / '.env'
-if env_path.exists():
-    load_dotenv(env_path)
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-default-key-change-this')
 
-# ===== БЕЗОПАСНОСТЬ =====
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me-in-production')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://pfinder.site',
-    'https://www.pfinder.site',
-    'http://pfinder.site',
-    'http://www.pfinder.site',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
+# ALLOWED_HOSTS - для Docker и SnapDeploy
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '.snapdeploy.app',
+    '.containers.snapdeploy.app',
+    os.environ.get('SITE_URL', '').replace('https://', '').replace('http://', ''),
 ]
 
-# ===== ПРИЛОЖЕНИЯ =====
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.snapdeploy.app',
+    'http://*.snapdeploy.app',
+    'https://*.containers.snapdeploy.app',
+    'http://*.containers.snapdeploy.app',
+]
+
+if os.environ.get('SITE_URL'):
+    CSRF_TRUSTED_ORIGINS.append(os.environ.get('SITE_URL'))
+
+# Настройки прокси
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,6 +56,7 @@ INSTALLED_APPS = [
     'providers',
     'reviews',
     'chat',
+    'telegram_bot',
 ]
 
 MIDDLEWARE = [
@@ -76,55 +91,136 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'profinder_django.wsgi.application'
 
-# ===== БАЗА ДАННЫХ =====
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# ============= БАЗА ДАННЫХ =============
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# ===== ВАЛИДАЦИЯ ПАРОЛЕЙ =====
+if DATABASE_URL:
+    # PostgreSQL для продакшена
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    # SQLite для разработки
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
-# ===== ЛОКАЛИЗАЦИЯ =====
+# Internationalization
 LANGUAGE_CODE = 'ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = False
 USE_TZ = True
 
-# ===== СТАТИЧЕСКИЕ ФАЙЛЫ =====
+# ============= СТАТИЧЕСКИЕ ФАЙЛЫ =============
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ===== МЕДИА ФАЙЛЫ =====
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# ===== НАСТРОЙКИ ЗАГРУЗКИ =====
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760
-
+# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ===== АУТЕНТИФИКАЦИЯ =====
+# Custom user model
+AUTH_USER_MODEL = 'users.User'
+
+# Authentication
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'index'
 LOGOUT_REDIRECT_URL = 'index'
 
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
+# Crispy forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
-AUTH_USER_MODEL = 'users.User'
+# ============= EMAIL =============
+if os.environ.get('EMAIL_HOST'):
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# ===== КАТЕГОРИИ =====
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+
+# ============= ЛОГИРОВАНИЕ =============
+LOG_DIR = BASE_DIR / 'logs'
+if not LOG_DIR.exists():
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': LOG_DIR / 'django.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['file', 'console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
+
+# ============= КАТЕГОРИИ =============
 CATEGORIES = [
     'Электрика',
     'Сантехника',
@@ -144,56 +240,8 @@ CATEGORIES = [
     'Ремонт',
     'Доставка',
     'Красота и здоровье',
-    'Фитнес и спорт'
+    'Фитнес и спорт',
 ]
 
-# ===== НАСТРОЙКИ EMAIL =====
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# ===== ЛОГИРОВАНИЕ =====
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'django.request': {
-            'handlers': ['file'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-    },
-}
-
-# Создаем папку для логов
-LOG_DIR = BASE_DIR / 'logs'
-if not LOG_DIR.exists():
-    LOG_DIR.mkdir(parents=True, mode=0o755, exist_ok=True)
-
-SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
