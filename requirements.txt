@@ -1,46 +1,10 @@
-# Основной фреймворк
-Django>=4.2,<5.0
-
-# Для работы с изображениями
-Pillow>=10.0.0
-
-# Для стилизации форм
-django-crispy-forms>=2.0
-crispy-bootstrap5>=0.7
-
-# Для работы с API
-djangorestframework>=3.14.0
-djangorestframework-simplejwt>=5.3.0
-drf-yasg>=1.21.7
-django-filter>=23.0.0
-
-# Для CORS
-django-cors-headers>=4.0.0
-
-# Для работы с .env файлами
-python-dotenv>=1.0.0
-
-# Для работы с PostgreSQL
-psycopg2-binary>=2.9.0
-
-# Для работы с Redis
-redis>=5.0.0
-
-# Для работы с Celery
-celery>=5.3.0
-
-# Для логирования и отладки
-django-debug-toolbar>=4.0.0
-
-# Для продакшена
-gunicorn>=21.0.0
-whitenoise>=6.5.0
-
-# Для геокодинга
-requests>=2.31.0
-
-# Для Telegram бота
-python-telegram-bot>=20.3.0
-
-# Для работы с датами
-python-dateutil>=2.8.2
+Django==4.2.30
+whitenoise==6.6.0
+crispy-forms==2.1
+crispy-bootstrap5==0.7
+Pillow==10.3.0
+gunicorn==21.2.0
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
+python-dotenv==1.0.1
+django-crispy-forms==2.1
