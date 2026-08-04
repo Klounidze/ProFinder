@@ -3,27 +3,47 @@ Django settings for profinder_django project.
 """
 
 import os
-import dj_database_url
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Build paths
+# Загружаем переменные окружения из файла .env (для локальной разработки)
+load_dotenv()
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ============= БЕЗОПАСНОСТЬ =============
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-default-key-change-this')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+
+# Если ключ не найден - выбрасываем ошибку (для продакшена)
+if not SECRET_KEY:
+    if os.environ.get('DEBUG', 'False') == 'True':
+        # Только для разработки!
+        SECRET_KEY = 'django-insecure-fallback-key-for-dev-only'
+        print("⚠️  WARNING: Using fallback SECRET_KEY. DO NOT USE IN PRODUCTION!")
+    else:
+        raise ValueError("❌ DJANGO_SECRET_KEY environment variable is not set!")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS - для Docker и SnapDeploy
+# ============= НАСТРОЙКИ ДЛЯ SNAPDEPLOY =============
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
-    '.snapdeploy.app',
-    '.containers.snapdeploy.app',
-    os.environ.get('SITE_URL', '').replace('https://', '').replace('http://', ''),
+    '.snapdeploy.app',  # Разрешает все поддомены snapdeploy.app
+    '.containers.snapdeploy.app',  # Альтернативный вариант
+    '.snapdeploy.com',  # Если используется
 ]
+
+# Добавляем хост из SITE_URL если он задан
+site_url = os.environ.get('SITE_URL')
+if site_url:
+    host = site_url.replace('https://', '').replace('http://', '').split('/')[0]
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
@@ -31,16 +51,32 @@ CSRF_TRUSTED_ORIGINS = [
     'http://*.snapdeploy.app',
     'https://*.containers.snapdeploy.app',
     'http://*.containers.snapdeploy.app',
+    'https://*.snapdeploy.com',
+    'http://*.snapdeploy.com',
 ]
 
-if os.environ.get('SITE_URL'):
-    CSRF_TRUSTED_ORIGINS.append(os.environ.get('SITE_URL'))
+# Добавляем текущий SITE_URL
+if site_url:
+    CSRF_TRUSTED_ORIGINS.append(site_url)
+    CSRF_TRUSTED_ORIGINS.append(site_url.replace('https://', 'http://'))
 
-# Настройки прокси
+# Настройки для работы за прокси (Cloudflare, nginx и т.д.)
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# ============= БЕЗОПАСНОСТЬ В ПРОДАКШЕНЕ =============
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 год
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# ============= ОСНОВНЫЕ НАСТРОЙКИ DJANGO =============
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -61,7 +97,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Для статических файлов
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -92,27 +128,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'profinder_django.wsgi.application'
 
 # ============= БАЗА ДАННЫХ =============
-DATABASE_URL = os.environ.get('DATABASE_URL')
-
-if DATABASE_URL:
-    # PostgreSQL для продакшена
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True
-        )
+# Используем SQLite (просто и надежно)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    # SQLite для разработки
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
-# Password validation
+# ============= ВАЛИДАЦИЯ ПАРОЛЕЙ =============
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -131,7 +155,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
+# ============= ИНТЕРНАЦИОНАЛИЗАЦИЯ =============
 LANGUAGE_CODE = 'ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = False
@@ -143,10 +167,11 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files
+# ============= МЕДИА ФАЙЛЫ =============
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# ============= ДРУГИЕ НАСТРОЙКИ =============
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -162,7 +187,7 @@ LOGOUT_REDIRECT_URL = 'index'
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
-# ============= EMAIL =============
+# ============= EMAIL НАСТРОЙКИ =============
 if os.environ.get('EMAIL_HOST'):
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.environ.get('EMAIL_HOST')
@@ -220,7 +245,7 @@ LOGGING = {
     },
 }
 
-# ============= КАТЕГОРИИ =============
+# ============= КАТЕГОРИИ ДЛЯ ПРОВАЙДЕРОВ =============
 CATEGORIES = [
     'Электрика',
     'Сантехника',
@@ -243,5 +268,6 @@ CATEGORIES = [
     'Фитнес и спорт',
 ]
 
+# ============= ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ =============
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
