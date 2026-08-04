@@ -4,18 +4,26 @@ FROM python:3.11-slim
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Устанавливаем зависимости системы
+# Устанавливаем переменные окружения
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=profinder_django.settings
+
+# Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
     gcc \
-    libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем requirements.txt и устанавливаем зависимости Python
+# Копируем requirements и устанавливаем зависимости
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем весь проект
 COPY . .
+
+# Создаем директории для логов и медиа
+RUN mkdir -p /app/logs /app/media /app/staticfiles
 
 # Собираем статические файлы
 RUN python manage.py collectstatic --noinput
@@ -23,8 +31,5 @@ RUN python manage.py collectstatic --noinput
 # Открываем порт
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 profinder_django.wsgi:application"]
-
-
-# Запускаем приложение через Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "profinder_django.wsgi:application"]
+# Запускаем приложение
+CMD ["gunicorn", "profinder_django.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "--timeout", "120"]
